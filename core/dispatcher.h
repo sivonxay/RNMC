@@ -18,18 +18,21 @@ struct SimulatorPayload {
     HistoryQueue<HistoryPacket> &history_queue;
     SeedQueue &seed_queue;
     int step_cutoff;
+    double time_cutoff;
 
     SimulatorPayload(
         Model &model,
         HistoryQueue<HistoryPacket> &history_queue,
         SeedQueue &seed_queue,
-        int step_cutoff
+        int step_cutoff,
+        double time_cutoff
         ) :
 
             model (model),
             history_queue (history_queue),
             seed_queue (seed_queue),
-            step_cutoff (step_cutoff) {};
+            step_cutoff (step_cutoff),
+            time_cutoff (time_cutoff) {};
 
     void run_simulator() {
 
@@ -37,7 +40,7 @@ struct SimulatorPayload {
                seed_queue.get_seed()) {
 
             unsigned long int seed = maybe_seed.value();
-            Simulation<Solver, Model> simulation (model, seed, step_cutoff);
+            Simulation<Solver, Model> simulation (model, seed, step_cutoff, time_cutoff);
             simulation.execute_steps(step_cutoff);
 
             // Calling resize() with a smaller size has no effect on the capacity of a vector.
@@ -69,6 +72,7 @@ struct Dispatcher {
     SeedQueue seed_queue;
     std::vector<std::thread> threads;
     int step_cutoff;
+    double time_cutoff;
     int number_of_simulations;
     int number_of_threads;
 
@@ -79,6 +83,7 @@ struct Dispatcher {
         unsigned long int base_seed,
         int number_of_threads,
         int step_cutoff,
+        double time_cutoff,
         Parameters parameters) :
         model_database (
             model_database_file,
@@ -98,6 +103,7 @@ struct Dispatcher {
         // don't want to start threads in the constructor.
         threads (),
         step_cutoff (step_cutoff),
+        time_cutoff (time_cutoff),
         number_of_simulations (number_of_simulations),
         number_of_threads (number_of_threads)
         {};
@@ -124,7 +130,8 @@ void Dispatcher<Solver, Model, Parameters, TrajectoriesSql>::run_dispatcher() {
                 model,
                 history_queue,
                 seed_queue,
-                step_cutoff)
+                step_cutoff,
+                time_cutoff)
             );
 
     }

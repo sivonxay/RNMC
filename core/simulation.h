@@ -14,6 +14,7 @@ struct Simulation {
     unsigned long int seed;
     std::vector<int> state;
     double time;
+    double time_cutoff;
     int step; // number of reactions which have occoured
     Solver solver;
     std::vector<HistoryElement> history;
@@ -25,11 +26,13 @@ struct Simulation {
 
                // step cutoff gets used here to set the history length
                // we don't actually store it in the Simulation object
-               int step_cutoff) :
+               int step_cutoff,
+               double time_cutoff) :
         model (model),
         seed (seed),
         state (model.initial_state),
         time (0.0),
+        time_cutoff (time_cutoff),
         step (0),
         solver (seed, std::ref(model.initial_propensities)),
         history (step_cutoff + 1),
@@ -76,7 +79,11 @@ bool Simulation<Solver, Model>::execute_step() {
             std::ref(state),
             next_reaction);
 
-        return true;
+        if (time >= time_cutoff) {
+          return false;
+        } else {
+          return true;
+        }
     }
 };
 

@@ -10,11 +10,12 @@ void print_usage() {
               << "--number_of_simulations\n"
               << "--base_seed\n"
               << "--thread_count\n"
-              << "--step_cutoff\n";
+              << "--step_cutoff\n"
+              << "--time_cutoff\n";
 }
 
 int main(int argc, char **argv) {
-    if (argc != 7) {
+    if (argc != 8) {
         print_usage();
         exit(EXIT_FAILURE);
     }
@@ -27,6 +28,7 @@ int main(int argc, char **argv) {
         {"base_seed", required_argument, NULL, 4},
         {"thread_count", required_argument, NULL, 5},
         {"step_cutoff", required_argument, NULL, 6},
+        {"time_cutoff", required_argument, NULL, 7},
         {NULL, 0, NULL, 0}
         // last element of options array needs to be filled with zeros
     };
@@ -40,6 +42,7 @@ int main(int argc, char **argv) {
     int base_seed = 0;
     int thread_count = 0;
     int step_cutoff = 0;
+    double time_cutoff = 0;
 
     while ((c = getopt_long_only(
                 argc, argv, "",
@@ -72,6 +75,10 @@ int main(int argc, char **argv) {
             step_cutoff = atoi(optarg);
             break;
 
+        case 7:
+            time_cutoff = atof(optarg);
+            break;
+
         default:
             // if an unexpected argument is passed, exit
             print_usage();
@@ -97,6 +104,7 @@ int main(int argc, char **argv) {
             base_seed,
             thread_count,
             step_cutoff,
+            time_cutoff,
             parameters
             );
 
