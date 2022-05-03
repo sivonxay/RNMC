@@ -320,7 +320,7 @@ NanoParticle::NanoParticle(
     for (unsigned int i = 0; i < two_site_interactions.size(); i++) {
         Interaction interaction = two_site_interactions[i];
         two_site_interactions_map[interaction.species_id[0]][interaction.species_id[1]][interaction.left_state[0]][interaction.left_state[1]].push_back(interaction);
-
+        // two_site_interactions_map[interaction.species_id[1]][interaction.species_id[0]][interaction.left_state[1]][interaction.left_state[0]].push_back(interaction);
     }
 
     // initialize initial_state
@@ -364,16 +364,32 @@ NanoParticle::NanoParticle(
             if (site_id_0 != (int) site_id_1) {
                 int site_1_state = current_state[site_id_1];
                 int site_1_species_id = sites[site_id_1].species_id;
-                std::vector<Interaction> available_interactions = two_site_interactions_map[site_0_species_id][site_1_species_id][site_0_state][site_1_state];
                 double distance = distance_matrix[site_id_0][site_id_1];
-                if (distance <= interaction_radius_bound) {
+                if (distance < interaction_radius_bound) {
+                    // Add reactions where site 0 is the donor
+                    std::vector<Interaction> available_interactions = two_site_interactions_map[site_0_species_id][site_1_species_id][site_0_state][site_1_state];
                     for (unsigned int i = 0; i < available_interactions.size(); i++){
                         Interaction interaction = available_interactions[i];
                         Reaction reaction = Reaction {
-                                            .site_id = { (int) site_id_0, (int) site_id_1 },
-                                            .interaction = interaction,
-                                            .rate = distance_factor_function(distance) * interaction.rate * two_site_interaction_factor
-                                            };
+                                                .site_id = { (int) site_id_0, (int) site_id_1 },
+                                                .interaction = interaction,
+                                                .rate = distance_factor_function(distance) * interaction.rate * two_site_interaction_factor
+                                                };
+                        initial_reactions.push_back(reaction);
+                        site_reaction_dependency[site_id_0].insert(reaction_count);
+                        site_reaction_dependency[site_id_1].insert(reaction_count);
+                        reaction_count++;
+                    }
+
+                    // Add reactions where site 1 is the donor
+                    available_interactions = two_site_interactions_map[site_1_species_id][site_0_species_id][site_1_state][site_0_state];
+                    for (unsigned int i = 0; i < available_interactions.size(); i++){
+                        Interaction interaction = available_interactions[i];
+                        Reaction reaction = Reaction {
+                                                .site_id = { (int) site_id_1, (int) site_id_0 },
+                                                .interaction = interaction,
+                                                .rate = distance_factor_function(distance) * interaction.rate * two_site_interaction_factor
+                                                };
                         initial_reactions.push_back(reaction);
                         site_reaction_dependency[site_id_0].insert(reaction_count);
                         site_reaction_dependency[site_id_1].insert(reaction_count);
@@ -491,13 +507,27 @@ void NanoParticle::update_reactions(
             if (site_id_0 != (int) site_id_1) {
                 int site_1_state = state[site_id_1];
                 int site_1_species_id = sites[site_id_1].species_id;
-                std::vector<Interaction> available_interactions = two_site_interactions_map[site_0_species_id][site_1_species_id][site_0_state][site_1_state];
+
                 double distance = distance_matrix[site_id_0][site_id_1];
                 if (distance < interaction_radius_bound) {
+                    // Add reactions where site 0 is the donor
+                    std::vector<Interaction> available_interactions = two_site_interactions_map[site_0_species_id][site_1_species_id][site_0_state][site_1_state];
                     for (unsigned int i = 0; i < available_interactions.size(); i++){
                         Interaction interaction = available_interactions[i];
                         Reaction new_reaction = Reaction {
                                                 .site_id = { (int) site_id_0, (int) site_id_1 },
+                                                .interaction = interaction,
+                                                .rate = distance_factor_function(distance) * interaction.rate * two_site_interaction_factor
+                                                };
+                        new_reactions.push_back(new_reaction);
+                    }
+
+                    // Add reactions where site 1 is the donor
+                    available_interactions = two_site_interactions_map[site_1_species_id][site_0_species_id][site_1_state][site_0_state];
+                    for (unsigned int i = 0; i < available_interactions.size(); i++){
+                        Interaction interaction = available_interactions[i];
+                        Reaction new_reaction = Reaction {
+                                                .site_id = { (int) site_id_1, (int) site_id_0 },
                                                 .interaction = interaction,
                                                 .rate = distance_factor_function(distance) * interaction.rate * two_site_interaction_factor
                                                 };
