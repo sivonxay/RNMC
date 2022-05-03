@@ -467,19 +467,6 @@ void NanoParticle::update_reactions(
     std::vector<Reaction> &current_reactions,
     Reaction reaction) {
 
-    std::cerr << "---------\n"
-              << "New "
-              << reaction.interaction.number_of_sites
-              << "-site reaction (involving sites "
-              << reaction.site_id[0]
-              << " and "
-              << reaction.site_id[1]
-              << ") fired: "
-              << reaction.interaction.interaction_id
-              << " - rate = "
-              << reaction.rate
-              << "\n";
-
     // Compute the new reactions based on the new states
     std::vector<Reaction> new_reactions;
     for ( int k = 0; k < reaction.interaction.number_of_sites; k++) {
@@ -525,16 +512,12 @@ void NanoParticle::update_reactions(
     std::set<int>::iterator site_reaction_dependency_itr;
     std::set<int> reaction_dependency;
     for ( int k = 0; k < reaction.interaction.number_of_sites; k++) {
-        std::cerr << "Adding to the remove list: ";
         reaction_dependency = current_site_reaction_dependency[reaction.site_id[k]];
         for (site_reaction_dependency_itr = reaction_dependency.begin();
              site_reaction_dependency_itr != reaction_dependency.end();
              site_reaction_dependency_itr++) {
               int reaction_id_to_remove = *site_reaction_dependency_itr;
               reactions_to_remove.insert(reaction_id_to_remove);
-
-              std::cerr << *site_reaction_dependency_itr
-                        << ", ";
 
               // Need to remove this interaction from the second site if this is a two_site interaction
               Reaction reaction_to_remove = current_reactions[reaction_id_to_remove];
@@ -543,30 +526,13 @@ void NanoParticle::update_reactions(
               }
 
         }
-
-        std::cerr << "\n";
         current_site_reaction_dependency[reaction.site_id[k]].clear();
     }
-
-    std::cerr << "There are currently "
-              << current_reactions.size()
-              << " reactions.\n"
-              << reactions_to_remove.size()
-              << " to be removed, and "
-              << new_reactions.size()
-              << " to be added.\n";
-
-    std::cerr << "Removing: ";
-    std::set<int>::iterator itr;
-    for (itr = reactions_to_remove.begin(); itr != reactions_to_remove.end(); itr++) {
-        std::cerr << *itr << ", ";
-    }
-    std::cerr << "\n";
 
     // Replace the reactions in current_reactions
     int reactions_replaced = 0;
     int n_reactions_to_remove = reactions_to_remove.size();
-    itr = reactions_to_remove.begin();
+    std::set<int>::iterator itr = reactions_to_remove.begin();
     for (unsigned int i = 0; i < new_reactions.size(); i++) {
         Reaction new_reaction = new_reactions[i];
         if ( i >= n_reactions_to_remove){
@@ -575,44 +541,15 @@ void NanoParticle::update_reactions(
             for (int k = 0; k < new_reaction.interaction.number_of_sites; k++) {
                 current_site_reaction_dependency[new_reaction.site_id[k]].insert(current_reactions.size()-1);
             }
-            std::cerr << "New interaction "
-                      << current_reactions.size()-1
-                      << ", involving sites "
-                      << new_reaction.site_id[0]
-                      << " and "
-                      << new_reaction.site_id[1]
-                      << "\n";
         } else {
             current_reactions[*itr] = new_reaction;
             for (int k = 0; k < new_reaction.interaction.number_of_sites; k++) {
                 current_site_reaction_dependency[new_reaction.site_id[k]].insert(*itr);
             }
-            std::cerr << "Replaced interaction "
-                      << *itr
-                      << "\n";
             reactions_replaced++;
             reactions_to_remove.erase(itr++);
-            // std::advance(itr, 1);
         }
     }
-    // reactions_to_remove.erase(reactions_to_remove.begin(), reactions_to_remove.begin()+reactions_replaced);
-
-    std::cerr << "Removing: ";
-    for (itr = reactions_to_remove.begin(); itr != reactions_to_remove.end(); itr++) {
-        std::cerr << *itr << ", ";
-    }
-    std::cerr << "\n";
-
-    // std::cerr << "Site Dependency map for site 426: ";
-    // for (site_reaction_dependency_itr = current_site_reaction_dependency[426].begin();
-    //      site_reaction_dependency_itr != current_site_reaction_dependency[426].end();
-    //      site_reaction_dependency_itr++) {
-    //     std::cerr << *site_reaction_dependency_itr
-    //               << ", ";
-    // }
-    // std::cerr << "\n";
-
-    std::cerr << "Num Reactions to remove: " << reactions_to_remove.size() << "\n";
 
     if (reactions_to_remove.size() > 0){
         int n_reactions_to_move = reactions_to_remove.size();
@@ -631,11 +568,6 @@ void NanoParticle::update_reactions(
             } else {
                 Reaction reaction_to_move = current_reactions[reaction_id_to_move];
                 current_reactions[*reactions_moved_itr] = reaction_to_move;
-                std::cerr << "Moving reaction "
-                          << reaction_id_to_move
-                          << " to "
-                          << *reactions_moved_itr
-                          << "\n";
 
                 // find the reaction that was moved in the site reaction dependency vector and remap it
                 for (int k = 0; k < reaction_to_move.interaction.number_of_sites; k++) {
@@ -647,27 +579,15 @@ void NanoParticle::update_reactions(
                         current_site_reaction_dependency[site_id].erase(reaction_id_to_move);
                         // int site_reaction_index = site_reaction_index_search - current_site_reaction_dependency[site_id].begin();
 
-                        std::cerr << "Remapping reaction "
-                                  << *site_reaction_index_search
-                                  << " to "
-                                  << *reactions_moved_itr
-                                  << "\n";
                         current_site_reaction_dependency[site_id].insert(*reactions_moved_itr);
                     } else {
                       // Throw some sort of error
-                      std::cerr << "Could not find reaction "
+                      std::cerr << "Fatal Error: Could not find reaction "
                                 << reaction_id_to_move
                                 << " in the site reaction dependency map for site "
                                 << site_id
                                 << "\n";
 
-                      for (itr = current_site_reaction_dependency[site_id].begin();
-                           itr != current_site_reaction_dependency[site_id].end();
-                           itr++) {
-                             std::cerr << *itr
-                                       << ", ";
-                      }
-                      std::cerr << "\n";
                       raise(SIGINT);
                     }
                 }
@@ -676,33 +596,6 @@ void NanoParticle::update_reactions(
                 reactions_moved++;
             }
         }
-        // for (unsigned int i = new_reactions.size(); i < reactions_to_remove.size(); i++){
-        //     // take a reaction from the end of the list and put it into the place of the reaction to remove
-        //     int reaction_index_to_move = current_reactions.size()-i;
-        //     Reaction reaction_to_move = current_reactions[reaction_index_to_move];
-        //     current_reactions[reactions_to_remove[i]] = reaction_to_move;
-        //
-        //     // find the reaction that was moved in the site reaction dependency vector and remap it
-        //     for (int k = 0; k < reaction_to_move.interaction.number_of_sites; k++) {
-        //         int site_id = reaction_to_move.site_id[k];
-        //         // This number should always be in the list, else something has gone wrong
-        //         auto site_reaction_index_search = std::find(current_site_reaction_dependency[site_id].begin(), current_site_reaction_dependency[site_id].end(), reaction_index_to_move);
-        //
-        //         if (site_reaction_index_search != current_site_reaction_dependency[site_id].end()){
-        //             int site_reaction_index = site_reaction_index_search - current_site_reaction_dependency[site_id].begin();
-        //             current_site_reaction_dependency[site_id][site_reaction_index] = reactions_to_remove[i];
-        //         } else {
-        //           // Throw some sort of error
-        //           std::cerr << "Could not find reaction "
-        //                     << reaction_index_to_move
-        //                     << " in the site reaction dependency map for site "
-        //                     << site_id
-        //                     << "\n";
-        //
-        //           raise(SIGINT);
-        //         }
-        //     }
-        // }
         current_reactions.resize(current_reactions.size() - n_reactions_to_move);
     }
 }
